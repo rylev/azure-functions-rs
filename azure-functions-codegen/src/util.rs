@@ -1,13 +1,19 @@
 use azure_functions_shared::codegen;
-use proc_macro::{Diagnostic, Span, TokenStream};
-use proc_macro2::Delimiter;
+use proc_macro::{Span, TokenStream};
+use proc_macro2::{Delimiter, Span as Span2};
+use quote::quote;
 use quote::ToTokens;
-use std::convert::TryFrom;
 use syn::buffer::TokenBuffer;
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-use syn::{parse, parse2, Attribute, Ident, Lit, LitStr, Path, PathSegment};
+use syn::{parse, parse2, Attribute, Ident, Lit, LitStr, Path, PathSegment, Token};
+
+pub trait TryFrom<T>: std::marker::Sized {
+    type Error;
+
+    fn try_from(item: T) -> Result<Self, Self::Error>;
+}
 
 pub fn to_camel_case(input: &str) -> String {
     let mut result = String::new();
@@ -35,7 +41,7 @@ pub struct AttributeArguments {
 }
 
 impl AttributeArguments {
-    pub fn with_name(name: &str, span: ::proc_macro2::Span) -> Self {
+    pub fn with_name(name: &str, span: proc_macro2::Span) -> Self {
         AttributeArguments {
             span: span.unstable(),
             list: vec![(Ident::new("name", span), Lit::Str(LitStr::new(name, span)))],
@@ -43,8 +49,36 @@ impl AttributeArguments {
     }
 }
 
+pub struct MacroError {
+    message: String,
+}
+impl MacroError {
+    pub fn emit(&self) {
+        panic!("{}", &self.message)
+    }
+}
+impl std::convert::Into<MacroError> for String {
+    fn into(self) -> MacroError {
+        MacroError { message: self }
+    }
+}
+impl std::convert::Into<MacroError> for (Span2, &str) {
+    fn into(self) -> MacroError {
+        MacroError {
+            message: self.1.to_owned(),
+        }
+    }
+}
+impl std::convert::Into<MacroError> for (Span, &str) {
+    fn into(self) -> MacroError {
+        MacroError {
+            message: self.1.to_owned(),
+        }
+    }
+}
+
 impl TryFrom<TokenStream> for AttributeArguments {
-    type Error = Diagnostic;
+    type Error = MacroError;
 
     fn try_from(stream: TokenStream) -> Result<Self, Self::Error> {
         if stream.is_empty() {
@@ -54,14 +88,14 @@ impl TryFrom<TokenStream> for AttributeArguments {
             });
         }
 
-        parse::<AttributeArguments>(stream).map_err(|e| Span::call_site().error(e.to_string()))
+        parse::<AttributeArguments>(stream).map_err(|e| e.to_string().into())
     }
 }
 
-impl TryFrom<::proc_macro2::TokenStream> for AttributeArguments {
-    type Error = Diagnostic;
+impl TryFrom<proc_macro2::TokenStream> for AttributeArguments {
+    type Error = MacroError;
 
-    fn try_from(stream: ::proc_macro2::TokenStream) -> Result<Self, Self::Error> {
+    fn try_from(stream: proc_macro2::TokenStream) -> Result<Self, Self::Error> {
         if stream.is_empty() {
             return Ok(AttributeArguments {
                 span: Span::call_site(),
@@ -69,12 +103,12 @@ impl TryFrom<::proc_macro2::TokenStream> for AttributeArguments {
             });
         }
 
-        parse2::<AttributeArguments>(stream).map_err(|e| Span::call_site().error(e.to_string()))
+        parse2::<AttributeArguments>(stream).map_err(|e| e.to_string().into())
     }
 }
 
 impl TryFrom<Attribute> for AttributeArguments {
-    type Error = Diagnostic;
+    type Error = MacroError;
 
     fn try_from(attr: Attribute) -> Result<Self, Self::Error> {
         let span = attr.span();
@@ -84,12 +118,12 @@ impl TryFrom<Attribute> for AttributeArguments {
         {
             Some((tree, _, _)) => tree.token_stream(),
             None => {
-                return Err(span.unstable().error("failed to parse attribute"));
+                return Err((span, "failed to parse attribute").into());
             }
         };
 
         let mut args = AttributeArguments::try_from(stream)
-            .map_err(|_| span.unstable().error("failed to parse attribute"))?;
+            .map_err(|_| (span, "failed to parse attribute").into())?;
         args.span = span.unstable();
         Ok(args)
     }
@@ -125,7 +159,7 @@ impl Parse for ArgumentAssignmentExpr {
 pub struct QuotableBorrowedStr<'a>(pub &'a str);
 
 impl ToTokens for QuotableBorrowedStr<'_> {
-    fn to_tokens(&self, tokens: &mut ::proc_macro2::TokenStream) {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let s = self.0;
         quote!(::std::borrow::Cow::Borrowed(#s)).to_tokens(tokens);
     }
@@ -134,7 +168,7 @@ impl ToTokens for QuotableBorrowedStr<'_> {
 pub struct QuotableOption<T>(pub Option<T>);
 
 impl<T: ToTokens> ToTokens for QuotableOption<T> {
-    fn to_tokens(&self, tokens: &mut ::proc_macro2::TokenStream) {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         match &self.0 {
             Some(inner) => quote!(Some(#inner)),
             None => quote!(None),
@@ -146,7 +180,7 @@ impl<T: ToTokens> ToTokens for QuotableOption<T> {
 pub struct QuotableDirection(pub codegen::Direction);
 
 impl ToTokens for QuotableDirection {
-    fn to_tokens(&self, tokens: &mut ::proc_macro2::TokenStream) {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         match self.0 {
             codegen::Direction::In => {
                 quote!(::azure_functions::codegen::Direction::In).to_tokens(tokens)
@@ -174,7 +208,7 @@ impl Parse for PathVec {
 
 impl IntoIterator for PathVec {
     type Item = Path;
-    type IntoIter = ::std::vec::IntoIter<Path>;
+    type IntoIter = std::vec::IntoIter<Path>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
@@ -182,14 +216,14 @@ impl IntoIterator for PathVec {
 }
 
 impl TryFrom<TokenStream> for PathVec {
-    type Error = Diagnostic;
+    type Error = MacroError;
 
     fn try_from(stream: TokenStream) -> Result<Self, Self::Error> {
         if stream.is_empty() {
             return Ok(Self::default());
         }
 
-        parse::<PathVec>(stream).map_err(|e| Span::call_site().error(e.to_string()))
+        parse::<PathVec>(stream).map_err(|e| e.to_string().into())
     }
 }
 

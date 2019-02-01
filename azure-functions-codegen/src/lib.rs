@@ -1,20 +1,12 @@
 //! # Azure Functions for Rust
 //!
 //! This crate supports the code generation for the `azure-functions` crate.
-#![feature(in_band_lifetimes)]
-#![feature(proc_macro_diagnostic)]
-#![feature(drain_filter)]
-#![feature(try_from)]
 #![recursion_limit = "128"]
 #![deny(unused_extern_crates)]
 
 #[macro_use]
 extern crate lazy_static;
 extern crate proc_macro;
-#[macro_use]
-extern crate syn;
-#[macro_use]
-extern crate quote;
 
 mod export;
 mod func;
@@ -41,7 +33,7 @@ use proc_macro::TokenStream;
 /// ```
 #[proc_macro]
 pub fn export(input: TokenStream) -> TokenStream {
-    export::attr_impl(input)
+  export::attr_impl(input)
 }
 
 /// Implements the `func` attribute.
@@ -59,5 +51,5 @@ pub fn export(input: TokenStream) -> TokenStream {
 /// }
 #[proc_macro_attribute]
 pub fn func(args: TokenStream, input: TokenStream) -> TokenStream {
-    func::attr_impl(args, input)
+  func::attr_impl(args, input)
 }

@@ -77,7 +77,6 @@
 //! The above Azure Function can be invoked with `http://localhost:8080/api/hello?name=Peter`.
 //!
 //! The expected response would be `Hello from Rust, Peter!`.
-#![deny(missing_docs)]
 #![deny(unused_extern_crates)]
 #![cfg_attr(test, recursion_limit = "128")]
 
@@ -110,8 +109,8 @@ pub mod http;
 #[doc(hidden)]
 pub mod rpc;
 pub mod timer;
-#[doc(no_inline)]
 #[proc_macro_hack]
+#[doc(no_inline)]
 pub use azure_functions_codegen::export;
 pub use azure_functions_shared::Context;
 

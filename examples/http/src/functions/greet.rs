@@ -1,4 +1,7 @@
-use azure_functions::{func, Context, bindings::{HttpRequest, HttpResponse}};
+use azure_functions::{
+    bindings::{HttpRequest, HttpResponse},
+    func, Context,
+};
 
 #[func]
 #[binding(name = "req", auth_level = "anonymous")]

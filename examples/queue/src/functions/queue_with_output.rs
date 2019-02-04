@@ -1,4 +1,7 @@
-use azure_functions::{func, bindings::{QueueMessage, QueueTrigger}};
+use azure_functions::{
+    bindings::{QueueMessage, QueueTrigger},
+    func,
+};
 
 #[func]
 #[binding(name = "trigger", queue_name = "echo-in")]

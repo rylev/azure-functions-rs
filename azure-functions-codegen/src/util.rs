@@ -1,4 +1,6 @@
 use azure_functions_shared::codegen;
+#[cfg(feature = "unstable")]
+use proc_macro::Diagnostic;
 use proc_macro::{Span, TokenStream};
 use proc_macro2::{Delimiter, Span as Span2};
 use quote::quote;
@@ -49,30 +51,66 @@ impl AttributeArguments {
     }
 }
 
-pub struct MacroError {
-    message: String,
-}
-impl MacroError {
-    pub fn emit(&self) {
-        panic!("{}", &self.message)
-    }
-}
-impl std::convert::Into<MacroError> for String {
-    fn into(self) -> MacroError {
-        MacroError { message: self }
-    }
-}
-impl std::convert::Into<MacroError> for (Span2, &str) {
-    fn into(self) -> MacroError {
-        MacroError {
-            message: self.1.to_owned(),
+cfg_if::cfg_if! {
+    if #[cfg(feature = "unstable")] {
+        pub struct MacroError {
+            inner: Diagnostic,
         }
-    }
-}
-impl std::convert::Into<MacroError> for (Span, &str) {
-    fn into(self) -> MacroError {
-        MacroError {
-            message: self.1.to_owned(),
+        impl MacroError {
+            pub fn emit(self) {
+                println!("A");
+                self.inner.emit()
+            }
+        }
+        impl std::convert::Into<MacroError> for String {
+            fn into(self) -> MacroError {
+                MacroError {
+                    inner: Span::call_site().error(self)
+                }
+            }
+        }
+        impl std::convert::Into<MacroError> for (Span2, &str) {
+            fn into(self) -> MacroError {
+                MacroError {
+                    inner: self.0.unstable().error(self.1)
+                }
+            }
+        }
+        impl std::convert::Into<MacroError> for (Span, &str) {
+            fn into(self) -> MacroError {
+                MacroError {
+                    inner: self.0.error(self.1)
+                }
+            }
+        }
+    } else {
+        pub struct MacroError {
+            message: String,
+        }
+        impl MacroError {
+            pub fn emit(self) {
+                println!("B");
+                panic!("{}", &self.message)
+            }
+        }
+        impl std::convert::Into<MacroError> for String {
+            fn into(self) -> MacroError {
+                MacroError { message: self }
+            }
+        }
+        impl std::convert::Into<MacroError> for (Span2, &str) {
+            fn into(self) -> MacroError {
+                MacroError {
+                    message: self.1.to_owned(),
+                }
+            }
+        }
+        impl std::convert::Into<MacroError> for (Span, &str) {
+            fn into(self) -> MacroError {
+                MacroError {
+                    message: self.1.to_owned(),
+                }
+            }
         }
     }
 }

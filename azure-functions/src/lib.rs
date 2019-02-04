@@ -91,6 +91,8 @@ extern crate matches;
 #[macro_use]
 extern crate lazy_static;
 
+use proc_macro_hack::proc_macro_hack;
+
 #[doc(no_inline)]
 pub use azure_functions_codegen::func;
 
@@ -109,6 +111,7 @@ pub mod http;
 pub mod rpc;
 pub mod timer;
 #[doc(no_inline)]
+#[proc_macro_hack]
 pub use azure_functions_codegen::export;
 pub use azure_functions_shared::Context;
 

@@ -1,6 +1,4 @@
-use azure_functions::bindings::{HttpRequest, HttpResponse};
-use azure_functions::func;
-use azure_functions::http::Status;
+use azure_functions::{func, http::Status, bindings::{HttpRequest, HttpResponse}};
 use serde_json::to_value;
 
 #[derive(Deserialize)]

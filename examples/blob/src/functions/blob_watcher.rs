@@ -1,4 +1,4 @@
-use azure_functions::{func, bindings::BlobTrigger};
+use azure_functions::{bindings::BlobTrigger, func};
 
 #[func]
 #[binding(name = "trigger", path = "watching/{name}")]

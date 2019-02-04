@@ -35,7 +35,7 @@ use proc_macro::TokenStream;
 /// ```
 #[proc_macro_hack]
 pub fn export(input: TokenStream) -> TokenStream {
-  export::attr_impl(input)
+    export::attr_impl(input)
 }
 
 /// Implements the `func` attribute.
@@ -53,5 +53,5 @@ pub fn export(input: TokenStream) -> TokenStream {
 /// }
 #[proc_macro_attribute]
 pub fn func(args: TokenStream, input: TokenStream) -> TokenStream {
-  func::attr_impl(args, input)
+    func::attr_impl(args, input)
 }

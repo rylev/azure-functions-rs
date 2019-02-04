@@ -279,14 +279,11 @@ fn drain_binding_attributes(
     attrs: &mut Vec<Attribute>,
 ) -> Result<HashMap<String, AttributeArguments>, MacroError> {
     let mut map = HashMap::new();
-    let mut to_remove = Vec::with_capacity(attrs.len());
     // TODO: use drain_filter when stable https://github.com/rust-lang/rust/issues/43244
-    for (i, attr) in attrs
+    for attr in attrs
         .iter()
         .filter(|a| path_to_string(&a.path) == "binding")
-        .enumerate()
     {
-        to_remove.push(i);
         let attr_span = attr.span();
         let args = AttributeArguments::try_from(attr.clone())?;
 
@@ -315,9 +312,7 @@ fn drain_binding_attributes(
         }
     }
 
-    for i in to_remove {
-        attrs.remove(i);
-    }
+    attrs.retain(|a| path_to_string(&a.path) != "binding");
 
     Ok(map)
 }
